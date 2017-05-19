@@ -1121,7 +1121,7 @@ boot_go(struct boot_rsp *rsp)
     }
     flash_area_open(FLASH_AREA_IMAGE_SCRATCH, &boot_data.scratch_area);
 
-    return 0;
+    return rc;
 }
 
 int
