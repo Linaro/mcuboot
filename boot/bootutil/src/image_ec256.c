@@ -19,9 +19,11 @@
 
 #include <string.h>
 
-#include "syscfg/syscfg.h"
+#ifdef APP_mynewt
+#include "mynewt/config.h"
+#endif
 
-#if MYNEWT_VAL(BOOTUTIL_SIGN_EC256)
+#ifdef MCUBOOT_SIGN_EC256
 #include "bootutil/sign_key.h"
 
 #include "mbedtls/oid.h"
@@ -176,4 +178,4 @@ bootutil_verify_sig(uint8_t *hash, uint32_t hlen, uint8_t *sig, int slen,
         return -2;
     }
 }
-#endif /* MYNEWT_VAL(BOOTUTIL_SIGN_EC256) */
+#endif /* MCUBOOT_SIGN_EC256 */

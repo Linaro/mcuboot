@@ -62,9 +62,78 @@ extern "C" {
 #include <logging/sys_log.h>
 
 /*
+ * When built on the simulator, just use printf().
+ */
+#elif defined(__BOOTSIM__)	/* !defined(__ZEPHYR__) */
+
+#include <stdio.h>
+
+#define BOOT_LOG_LEVEL_OFF	0
+#define BOOT_LOG_LEVEL_ERROR	1
+#define BOOT_LOG_LEVEL_WARNING	2
+#define BOOT_LOG_LEVEL_INFO	3
+#define BOOT_LOG_LEVEL_DEBUG	4
+
+/*
+ * The compiled log level determines the maximum level that can be
+ * printed.  Messages at or below this level can be printed, provided
+ * they are also enabled through the Rust logging system, such as by
+ * setting RUST_LOG to bootsim::api=info.
+ */
+#ifndef BOOT_LOG_LEVEL
+#define BOOT_LOG_LEVEL BOOT_LOG_LEVEL_INFO
+#endif
+
+int sim_log_enabled(int level);
+
+#if BOOT_LOG_LEVEL >= BOOT_LOG_LEVEL_ERROR
+#define BOOT_LOG_ERR(_fmt, ...)                                         \
+    do {                                                                \
+        if (sim_log_enabled(BOOT_LOG_LEVEL_ERROR)) {                    \
+            fprintf(stderr, "[ERR] " _fmt "\n", ##__VA_ARGS__);         \
+        }                                                               \
+    } while (0)
+#else
+#define BOOT_LOG_ERR(...) IGNORE(__VA_ARGS__)
+#endif
+
+#if BOOT_LOG_LEVEL >= BOOT_LOG_LEVEL_WARNING
+#define BOOT_LOG_WRN(_fmt, ...)                                         \
+    do {                                                                \
+        if (sim_log_enabled(BOOT_LOG_LEVEL_WARNING)) {                  \
+            fprintf(stderr, "[WRN] " _fmt "\n", ##__VA_ARGS__);         \
+        }                                                               \
+    } while (0)
+#else
+#define BOOT_LOG_WRN(...) IGNORE(__VA_ARGS__)
+#endif
+
+#if BOOT_LOG_LEVEL >= BOOT_LOG_LEVEL_INFO
+#define BOOT_LOG_INF(_fmt, ...)                                         \
+    do {                                                                \
+        if (sim_log_enabled(BOOT_LOG_LEVEL_INFO)) {                     \
+            fprintf(stderr, "[INF] " _fmt "\n", ##__VA_ARGS__);         \
+        }                                                               \
+    } while (0)
+#else
+#define BOOT_LOG_INF(...) IGNORE(__VA_ARGS__)
+#endif
+
+#if BOOT_LOG_LEVEL >= BOOT_LOG_LEVEL_DEBUG
+#define BOOT_LOG_DBG(_fmt, ...)                                         \
+    do {                                                                \
+        if (sim_log_enabled(BOOT_LOG_LEVEL_DEBUG)) {                    \
+            fprintf(stderr, "[DBG] " _fmt "\n", ##__VA_ARGS__);         \
+        }                                                               \
+    } while (0)
+#else
+#define BOOT_LOG_DBG(...) IGNORE(__VA_ARGS__)
+#endif
+
+/*
  * In other environments, logging calls are no-ops.
  */
-#else  /* !defined(__ZEPHYR__) */
+#else  /* !defined(__BOOTSIM__) */
 
 #define BOOT_LOG_LEVEL_OFF	0
 #define BOOT_LOG_LEVEL_ERROR	1

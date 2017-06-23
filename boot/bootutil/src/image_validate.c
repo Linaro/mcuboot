@@ -22,15 +22,22 @@
 #include <inttypes.h>
 #include <string.h>
 
-#include "syscfg/syscfg.h"
 #include "hal/hal_flash.h"
 #include "flash_map/flash_map.h"
 #include "bootutil/image.h"
+#include "bootutil/sha256.h"
 #include "bootutil/sign_key.h"
 
-#include "mbedtls/sha256.h"
+#ifdef APP_mynewt
+#include "mynewt/config.h"
+#endif
+
+#ifdef MCUBOOT_SIGN_RSA
 #include "mbedtls/rsa.h"
+#endif
+#if defined(MCUBOOT_SIGN_EC) || defined(MCUBOOT_SIGN_EC256)
 #include "mbedtls/ecdsa.h"
+#endif
 #include "mbedtls/asn1.h"
 
 #include "bootutil_priv.h"
@@ -43,19 +50,18 @@ bootutil_img_hash(struct image_header *hdr, const struct flash_area *fap,
                   uint8_t *tmp_buf, uint32_t tmp_buf_sz,
                   uint8_t *hash_result, uint8_t *seed, int seed_len)
 {
-    mbedtls_sha256_context sha256_ctx;
+    bootutil_sha256_context sha256_ctx;
     uint32_t blk_sz;
     uint32_t size;
     uint32_t off;
     int rc;
 
-    mbedtls_sha256_init(&sha256_ctx);
-    mbedtls_sha256_starts(&sha256_ctx, 0);
+    bootutil_sha256_init(&sha256_ctx);
 
     /* in some cases (split image) the hash is seeded with data from
      * the loader image */
     if(seed && (seed_len > 0)) {
-        mbedtls_sha256_update(&sha256_ctx, seed, seed_len);
+        bootutil_sha256_update(&sha256_ctx, seed, seed_len);
     }
 
     size = hdr->ih_img_size + hdr->ih_hdr_size;
@@ -74,9 +80,9 @@ bootutil_img_hash(struct image_header *hdr, const struct flash_area *fap,
         if (rc) {
             return rc;
         }
-        mbedtls_sha256_update(&sha256_ctx, tmp_buf, blk_sz);
+        bootutil_sha256_update(&sha256_ctx, tmp_buf, blk_sz);
     }
-    mbedtls_sha256_finish(&sha256_ctx, hash_result);
+    bootutil_sha256_finish(&sha256_ctx, hash_result);
 
     return 0;
 }
@@ -93,8 +99,8 @@ bootutil_img_validate(struct image_header *hdr, const struct flash_area *fap,
     uint32_t off;
     uint32_t size;
     uint32_t sha_off = 0;
-#if MYNEWT_VAL(BOOTUTIL_SIGN_RSA) || MYNEWT_VAL(BOOTUTIL_SIGN_EC) || \
-    MYNEWT_VAL(BOOTUTIL_SIGN_EC256)
+#if defined(MCUBOOT_SIGN_RSA) || defined(MCUBOOT_SIGN_EC) || \
+    defined(MCUBOOT_SIGN_EC256)
     uint32_t sig_off = 0;
     uint32_t sig_len = 0;
 #endif
@@ -103,17 +109,23 @@ bootutil_img_validate(struct image_header *hdr, const struct flash_area *fap,
     uint8_t hash[32];
     int rc;
 
-#if MYNEWT_VAL(BOOTUTIL_SIGN_RSA)
+#ifdef MCUBOOT_SIGN_RSA
+#ifdef MCUBOOT_RSA_PKCS1_15
     if ((hdr->ih_flags & IMAGE_F_PKCS15_RSA2048_SHA256) == 0) {
         return -1;
     }
+#else
+    if ((hdr->ih_flags & IMAGE_F_PKCS1_PSS_RSA2048_SHA256) == 0) {
+        return -1;
+    }
 #endif
-#if MYNEWT_VAL(BOOTUTIL_SIGN_EC)
+#endif
+#ifdef MCUBOOT_SIGN_EC
     if ((hdr->ih_flags & IMAGE_F_ECDSA224_SHA256) == 0) {
         return -1;
     }
 #endif
-#if MYNEWT_VAL(BOOTUTIL_SIGN_EC256)
+#ifdef MCUBOOT_SIGN_EC256
     if ((hdr->ih_flags & IMAGE_F_ECDSA256_SHA256) == 0) {
         return -1;
     }
@@ -147,7 +159,7 @@ bootutil_img_validate(struct image_header *hdr, const struct flash_area *fap,
             }
             sha_off = off + sizeof(tlv);
         }
-#if MYNEWT_VAL(BOOTUTIL_SIGN_RSA)
+#ifdef MCUBOOT_SIGN_RSA
         if (tlv.it_type == IMAGE_TLV_RSA2048) {
             if (tlv.it_len != 256) { /* 2048 bits */
                 return -1;
@@ -156,7 +168,7 @@ bootutil_img_validate(struct image_header *hdr, const struct flash_area *fap,
             sig_len = tlv.it_len;
         }
 #endif
-#if MYNEWT_VAL(BOOTUTIL_SIGN_EC)
+#ifdef MCUBOOT_SIGN_EC
         if (tlv.it_type == IMAGE_TLV_ECDSA224) {
             if (tlv.it_len < 64) { /* oids + 2 * 28 bytes */
                 return -1;
@@ -165,7 +177,7 @@ bootutil_img_validate(struct image_header *hdr, const struct flash_area *fap,
             sig_len = tlv.it_len;
         }
 #endif
-#if MYNEWT_VAL(BOOTUTIL_SIGN_EC256)
+#ifdef MCUBOOT_SIGN_EC256
         if (tlv.it_type == IMAGE_TLV_ECDSA256) {
             if (tlv.it_len < 72) { /* oids + 2 * 32 bytes */
                 return -1;
@@ -190,8 +202,8 @@ bootutil_img_validate(struct image_header *hdr, const struct flash_area *fap,
             return -1;
         }
     }
-#if MYNEWT_VAL(BOOTUTIL_SIGN_RSA) || MYNEWT_VAL(BOOTUTIL_SIGN_EC) || \
-    MYNEWT_VAL(BOOTUTIL_SIGN_EC256)
+#if defined(MCUBOOT_SIGN_RSA) || defined(MCUBOOT_SIGN_EC) || \
+    defined(MCUBOOT_SIGN_EC256)
     if (!sig_off) {
         /*
          * Header said there should be PKCS1.v5 signature, no TLV

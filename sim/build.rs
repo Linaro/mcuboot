@@ -10,11 +10,16 @@ fn main() {
     let mut conf = gcc::Config::new();
 
     conf.file("../boot/bootutil/src/loader.c");
+    conf.file("../boot/bootutil/src/caps.c");
     conf.file("../boot/bootutil/src/bootutil_misc.c");
     conf.file("csupport/run.c");
     conf.include("../boot/bootutil/include");
     conf.include("../boot/zephyr/include");
     conf.debug(true);
+    conf.flag("-Wall");
+    conf.define("__BOOTSIM__", None);
+    // conf.define("MCUBOOT_OVERWRITE_ONLY", None);
+    conf.define("MCUBOOT_USE_FLASH_AREA_GET_SECTORS", None);
     conf.compile("libbootutil.a");
     walk_dir("../boot").unwrap();
     walk_dir("csupport").unwrap();

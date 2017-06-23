@@ -2,6 +2,7 @@
 
 use flash::{Result, Flash};
 use libc;
+use log::LogLevel;
 use std::slice;
 
 // This isn't meant to call directly, but by a wrapper.
@@ -29,6 +30,31 @@ pub extern fn sim_flash_write(dev: *mut Flash, offset: u32, src: *const u8, size
 fn map_err(err: Result<()>) -> libc::c_int {
     match err {
         Ok(()) => 0,
-        Err(_) => -1,
+        Err(e) => {
+            warn!("{}", e);
+            -1
+        },
+    }
+}
+
+/// Called by C code to determine if we should log at this level.  Levels are defined in
+/// bootutil/bootutil_log.h.  This makes the logging from the C code controlled by bootsim::api, so
+/// for example, it can be enabled with something like:
+///     RUST_LOG=bootsim::api=info cargo run --release runall
+/// or
+///     RUST_LOG=bootsim=info cargo run --release runall
+#[no_mangle]
+pub extern fn sim_log_enabled(level: libc::c_int) -> libc::c_int {
+    let res = match level {
+        1 => log_enabled!(LogLevel::Error),
+        2 => log_enabled!(LogLevel::Warn),
+        3 => log_enabled!(LogLevel::Info),
+        4 => log_enabled!(LogLevel::Trace),
+        _ => false,
+    };
+    if res {
+        1
+    } else {
+        0
     }
 }

@@ -27,7 +27,7 @@
 #include <hal/hal_bsp.h>
 #include <hal/hal_system.h>
 #include <hal/hal_flash.h>
-#if MYNEWT_VAL(BOOT_SERIAL)
+#ifdef MCUBOOT_SERIAL
 #include <hal/hal_gpio.h>
 #include <boot_serial/boot_serial.h>
 #include <sysinit/sysinit.h>
@@ -39,24 +39,37 @@
 #define BOOT_AREA_DESC_MAX  (256)
 #define AREA_DESC_MAX       (BOOT_AREA_DESC_MAX)
 
-#if MYNEWT_VAL(BOOT_SERIAL)
+#ifdef MCUBOOT_SERIAL
 #define BOOT_SER_CONS_INPUT         128
 #endif
+
+/*
+ * Temporary flash_device_base() implementation.
+ *
+ * TODO: remove this when mynewt needs to support flash_device_base()
+ * for devices with nonzero base addresses.
+ */
+int flash_device_base(uint8_t fd_id, uintptr_t *ret)
+{
+    *ret = 0;
+    return 0;
+}
 
 int
 main(void)
 {
     struct boot_rsp rsp;
+    uintptr_t flash_base;
     int rc;
 
-#if MYNEWT_VAL(BOOT_SERIAL)
+#ifdef MCUBOOT_SERIAL
     sysinit();
 #else
     flash_map_init();
     hal_bsp_init();
 #endif
 
-#if MYNEWT_VAL(BOOT_SERIAL)
+#ifdef MCUBOOT_SERIAL
     /*
      * Configure a GPIO as input, and compare it against expected value.
      * If it matches, await for download commands from serial.
@@ -70,7 +83,11 @@ main(void)
     rc = boot_go(&rsp);
     assert(rc == 0);
 
-    hal_system_start((void *)(rsp.br_image_addr + rsp.br_hdr->ih_hdr_size));
+    rc = flash_device_base(rsp->br_flash_dev_id, &flash_base);
+    assert(rc == 0);
+
+    hal_system_start((void *)(flash_base + rsp.br_image_off +
+                              rsp.br_hdr->ih_hdr_size));
 
     return 0;
 }

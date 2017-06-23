@@ -16,37 +16,37 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#ifndef __BOOT_CONFIG_H__
+#define __BOOT_CONFIG_H__
 
-#include <zephyr.h>
-#include <string.h>
+#include "syscfg/syscfg.h"
 
-#include "os/os_heap.h"
+#if MYNEWT_VAL(BOOT_SERIAL)
+#define MCUBOOT_SERIAL 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_VALIDATE_SLOT0)
+#define MCUBOOT_VALIDATE_SLOT0 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_SIGN_EC256)
+#define MCUBOOT_SIGN_EC256 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_SIGN_RSA)
+#define MCUBOOT_SIGN_RSA 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_RSA_PKCS1_15
+#define MCUBOOT_RSA_PKCS1_15 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_SIGN_EC)
+#define MCUBOOT_SIGN_EC 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_USE_MBED_TLS)
+#define MCUBOOT_USE_MBED_TLS 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_USE_TINYCRYPT)
+#define MCUBOOT_USE_TINYCRYPT 1
+#endif
+#if MYNEWT_VAL(BOOTUTIL_OVERWRITE_ONLY)
+#define MCUBOOT_OVERWRITE_ONLY 1
+#endif
 
-#define MBEDTLS_CONFIG_FILE CONFIG_MBEDTLS_CFG_FILE
-#include <mbedtls/platform.h>
-
-/* D(void *os_malloc(size_t size)) */
-void *os_calloc(size_t nelem, size_t size)
-{
-    /* Note that this doesn't check for overflow.  Assume the
-     * calls only come from within the app. */
-    size_t total = nelem * size;
-    void *buf = k_malloc(total);
-    if (buf) {
-        memset(buf, 0, total);
-    }
-    return buf;
-}
-
-void os_free(void *ptr)
-{
-    k_free(ptr);
-}
-
-/*
- * Initialize mbedtls to be able to use the local heap.
- */
-void os_heap_init(void)
-{
-    mbedtls_platform_set_calloc_free(os_calloc, os_free);
-}
+#endif /* __BOOT_CONFIG_H__ */

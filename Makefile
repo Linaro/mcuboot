@@ -10,16 +10,31 @@
 
 # RSA
 CONF_FILE = boot/zephyr/prj.conf
-CFLAGS += -DBOOTUTIL_SIGN_RSA
+CFLAGS += -DMCUBOOT_SIGN_RSA -DMCUBOOT_USE_MBED_TLS
+
+# Newer uses should use the RSA-PSS signature algorithm.  This define
+# enables (and requires) this type of signature.
+#CFLAGS += -DMCUBOOT_RSA_PKCS1_15
 
 # ECDSA P-256
 #CONF_FILE = boot/zephyr/prj-p256.conf
-#CFLAGS += -DBOOTUTIL_SIGN_EC256
+#CFLAGS += -DMCUBOOT_SIGN_EC256 -DMCUBOOT_USE_TINYCRYPT
 
 # Enable this option to have the bootloader verify the signature of
 # the primary image upon every boot.  Without it, signature
 # verification only happens on upgrade.
-CFLAGS += -DBOOTUTIL_VALIDATE_SLOT0
+CFLAGS += -DMCUBOOT_VALIDATE_SLOT0
+
+# Enabling this option uses newer flash map APIs. This saves RAM and
+# avoids deprecated API usage.
+#
+# (This can be deleted when flash_area_to_sectors() is removed instead
+# of simply deprecated.)
+CFLAGS += -DMCUBOOT_USE_FLASH_AREA_GET_SECTORS
+
+# Enable this option to not use the swapping code and just overwrite
+# the image on upgrade.
+#CFLAGS += -DMCUBOOT_OVERWRITE_ONLY
 
 ##############################
 # End of configuration blocks.

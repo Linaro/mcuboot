@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017 Linaro
+ * Copyright (c) 2017 Linaro Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,26 @@
  * limitations under the License.
  */
 
-/**
- * @file
- * @brief Bootloader device specific configuration.
- */
+#include <bootutil/caps.h>
 
-#define FLASH_DRIVER_NAME		CONFIG_SOC_FLASH_MCUX_DEV_NAME
-#define FLASH_ALIGN			8
-#define FLASH_AREA_IMAGE_0_OFFSET	0x20000
-#define FLASH_AREA_IMAGE_0_SIZE		0x60000
-#define FLASH_AREA_IMAGE_1_OFFSET	0x80000
-#define FLASH_AREA_IMAGE_1_SIZE		0x60000
-#define FLASH_AREA_IMAGE_SCRATCH_OFFSET	0xe0000
-#define FLASH_AREA_IMAGE_SCRATCH_SIZE	0x20000
-#define FLASH_AREA_IMAGE_SECTOR_SIZE	0x01000
+uint32_t bootutil_get_caps(void)
+{
+        uint32_t res = 0;
+
+#if defined(MCUBOOT_SIGN_RSA)
+        res |= BOOTUTIL_CAP_RSA2048;
+#endif
+#if defined(MCUBOOT_SIGN_EC)
+        res |= BOOTUTIL_CAP_ECDSA_P224;
+#endif
+#if defined(MCUBOOT_SIGN_EC256)
+        res |= BOOTUTIL_CAP_ECDSA_P256;
+#endif
+#if defined(MCUBOOT_OVERWRITE_ONLY)
+        res |= BOOTUTIL_CAP_OVERWRITE_UPGRADE;
+#else
+        res |= BOOTUTIL_CAP_SWAP_UPGRADE;
+#endif
+
+        return res;
+}
